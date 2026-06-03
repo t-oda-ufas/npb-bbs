@@ -83,6 +83,7 @@ nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-b
 .comment-ct{display:flex;align-items:center;gap:4px;color:var(--text3);font-size:11px;margin-left:4px}
 .game-row-main{display:flex;align-items:center;width:100%;gap:6px}
 .game-row-center{display:flex;flex-direction:column;align-items:center;flex:1}
+.pitcher-score-row{display:flex;align-items:center;gap:4px;width:100%;justify-content:center}
 .game-venue{font-size:10px;color:var(--text3);margin-top:3px;white-space:nowrap}
 .pitcher-tag{width:56px;flex-shrink:0;line-height:1.5}
 .pitcher-name{font-size:11px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1035,12 +1036,14 @@ function gameRowHTML(g){
   return `<div class="game-row" onclick="openGameDetail('${g.id}')">
     <div class="game-row-main">
       <div class="team"><span class="team-em">${g.homeEm}</span><span class="team-nm">${g.home}</span></div>
-      ${pitcherTag(g.homePitcher,'right')}
       <div class="game-row-center">
-        <div class="score-wrap">${scoreHTML}</div>
+        <div class="pitcher-score-row">
+          ${pitcherTag(g.homePitcher,'right')}
+          <div class="score-wrap">${scoreHTML}</div>
+          ${pitcherTag(g.awayPitcher,'left')}
+        </div>
         ${g.venue?`<div class="game-venue">${g.venue}</div>`:''}
       </div>
-      ${pitcherTag(g.awayPitcher,'left')}
       <div class="team" style="justify-content:flex-end"><span class="team-nm">${g.away}</span><span class="team-em">${g.awayEm}</span></div>
       ${badgeHTML}
       <div class="comment-ct">💬 <span>${g.comments||0}</span></div>
