@@ -174,6 +174,35 @@ nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-b
 .auth-tab{flex:1;padding:8px;text-align:center;font-size:13px;cursor:pointer;color:var(--text2);transition:.12s;background:transparent;border:none;font-family:inherit}
 .auth-tab.active{background:var(--accent);color:#000;font-weight:700}
 
+/* AUTH REDESIGN */
+.auth-hero{text-align:center;padding:8px 0 20px}
+.auth-hero-icon{font-size:36px;margin-bottom:8px}
+.auth-hero h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px}
+.auth-hero p{font-size:12px;color:var(--text3)}
+.auth-steps{display:flex;justify-content:center;gap:6px;margin-top:12px}
+.auth-step-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:.3s}
+.auth-step-dot.active{background:var(--accent)}
+.pw-wrap{position:relative}
+.pw-wrap .form-input{padding-right:40px}
+.pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px;line-height:1}
+.pw-toggle:hover{color:var(--text)}
+.btn-auth{width:100%;padding:11px;border-radius:var(--radius-sm);background:var(--accent);color:#000;font-weight:700;font-size:14px;border:none;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-auth:hover{background:var(--accent2)}
+.btn-auth:disabled{opacity:.5;cursor:not-allowed}
+.auth-switch{text-align:center;font-size:12px;color:var(--text3);margin-top:14px}
+.auth-switch span{color:var(--accent);cursor:pointer;font-weight:700}
+.auth-switch span:hover{text-decoration:underline}
+.auth-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--text3);font-size:11px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.team-badge{padding:10px 6px;border-radius:var(--radius-sm);border:2px solid var(--border);background:var(--bg3);text-align:center;cursor:pointer;transition:.15s}
+.team-badge:hover{border-color:var(--border2);background:var(--bg2)}
+.team-badge.selected{border-color:var(--accent);background:rgba(0,200,122,.1)}
+.team-badge-em{font-size:20px;display:block;margin-bottom:3px}
+.team-badge-name{font-size:10px;color:var(--text2)}
+.auth-back{background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;padding:0;margin-bottom:16px}
+.auth-back:hover{color:var(--text)}
+
 /* STANDING-LIKE MINI TABLE */
 .stand-row{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);font-size:12px;gap:6px}
 .stand-row:last-child{border-bottom:none}
@@ -364,50 +393,81 @@ nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-b
 
 <!-- Auth Modal -->
 <div class="modal-overlay" id="authModal" onclick="if(event.target===this)closeModal('authModal')">
-<div class="modal">
-  <div class="modal-hd">
-    <h3 id="authTitle">ログイン</h3>
+<div class="modal" style="width:420px">
+  <div class="modal-hd" style="border:none;padding-bottom:0">
+    <div></div>
     <button class="modal-close" onclick="closeModal('authModal')">×</button>
   </div>
-  <div class="modal-body">
-    <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuth('login',this)">ログイン</button>
-      <button class="auth-tab" onclick="switchAuth('register',this)">新規登録</button>
+  <div class="modal-body" style="padding-top:0">
+
+    <!-- ===== ログイン ===== -->
+    <div id="authViewLogin">
+      <div class="auth-hero">
+        <div class="auth-hero-icon">⚾</div>
+        <h3>おかえりなさい</h3>
+        <p>NPB掲示板にログイン</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">メールアドレス</label>
+        <input type="email" class="form-input" placeholder="example@email.com" id="loginEmail">
+      </div>
+      <div class="form-group">
+        <label class="form-label">パスワード</label>
+        <div class="pw-wrap">
+          <input type="password" class="form-input" placeholder="パスワード" id="loginPass">
+          <button type="button" class="pw-toggle" onclick="togglePw('loginPass',this)">👁</button>
+        </div>
+      </div>
+      <button class="btn-auth" id="loginBtn" onclick="doLogin()">ログイン</button>
+      <p class="auth-switch">アカウントをお持ちでない方は <span onclick="showAuthView('reg1')">新規登録</span></p>
     </div>
-    <div class="form-group">
-      <label class="form-label">メールアドレス</label>
-      <input type="email" class="form-input" placeholder="example@email.com" id="authEmail">
+
+    <!-- ===== 新規登録 Step1 ===== -->
+    <div id="authViewReg1" style="display:none">
+      <div class="auth-hero">
+        <div class="auth-hero-icon">🎉</div>
+        <h3>NPB掲示板へようこそ</h3>
+        <p>アカウント情報を入力してください</p>
+        <div class="auth-steps">
+          <div class="auth-step-dot active"></div>
+          <div class="auth-step-dot"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ユーザー名</label>
+        <input type="text" class="form-input" placeholder="掲示板での表示名" id="regUsername" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label class="form-label">メールアドレス</label>
+        <input type="email" class="form-input" placeholder="example@email.com" id="regEmail">
+      </div>
+      <div class="form-group">
+        <label class="form-label">パスワード <span style="color:var(--text3);font-size:10px">（6文字以上）</span></label>
+        <div class="pw-wrap">
+          <input type="password" class="form-input" placeholder="パスワードを入力" id="regPass">
+          <button type="button" class="pw-toggle" onclick="togglePw('regPass',this)">👁</button>
+        </div>
+      </div>
+      <button class="btn-auth" onclick="goToStep2()">次へ　→</button>
+      <p class="auth-switch">すでにアカウントをお持ちの方は <span onclick="showAuthView('login')">ログイン</span></p>
     </div>
-    <div class="form-group">
-      <label class="form-label">パスワード</label>
-      <input type="password" class="form-input" placeholder="パスワード" id="authPass">
+
+    <!-- ===== 新規登録 Step2 ===== -->
+    <div id="authViewReg2" style="display:none">
+      <div class="auth-hero">
+        <div class="auth-hero-icon">🏟️</div>
+        <h3>推しチームを選ぼう！</h3>
+        <p>あとから変更できます</p>
+        <div class="auth-steps">
+          <div class="auth-step-dot"></div>
+          <div class="auth-step-dot active"></div>
+        </div>
+      </div>
+      <div class="team-grid" id="teamPickerGrid"></div>
+      <button class="btn-auth" id="regBtn" onclick="doRegister()" style="margin-top:12px">登録する 🎊</button>
+      <button class="auth-back" onclick="showAuthView('reg1')" style="justify-content:center;width:100%;margin-top:8px">← 戻る</button>
     </div>
-    <div class="form-group" id="registerExtra" style="display:none">
-      <label class="form-label">ユーザー名</label>
-      <input type="text" class="form-input" placeholder="表示名" id="authUsername">
-    </div>
-    <div class="form-group" id="favTeamField" style="display:none">
-      <label class="form-label">お気に入り球団</label>
-      <select class="form-select" id="authFavTeam">
-        <option value="">選択してください</option>
-        <option value="giants">🟡 読売ジャイアンツ</option>
-        <option value="tigers">🐯 阪神タイガース</option>
-        <option value="carp">🔴 広島東洋カープ</option>
-        <option value="dragons">🔵 中日ドラゴンズ</option>
-        <option value="swallows">🦢 東京ヤクルトスワローズ</option>
-        <option value="baystars">💙 横浜DeNAベイスターズ</option>
-        <option value="hawks">🦅 福岡ソフトバンクホークス</option>
-        <option value="lions">🦁 埼玉西武ライオンズ</option>
-        <option value="eagles">🦅 東北楽天ゴールデンイーグルス</option>
-        <option value="fighters">⚾ 北海道日本ハムファイターズ</option>
-        <option value="marines">🌊 千葉ロッテマリーンズ</option>
-        <option value="buffaloes">🐃 オリックス・バファローズ</option>
-      </select>
-    </div>
-  </div>
-  <div class="modal-footer">
-    <button class="btn btn-ghost" onclick="closeModal('authModal')">キャンセル</button>
-    <button class="btn btn-primary" id="authSubmitBtn" onclick="submitAuth()">ログイン</button>
+
   </div>
 </div>
 </div>
@@ -612,27 +672,98 @@ function updateNavUI(){
   }
 }
 
-async function submitAuth(){
-  const email = document.getElementById('authEmail').value.trim();
-  const pass  = document.getElementById('authPass').value;
-  const mode  = document.getElementById('authSubmitBtn').dataset.mode || 'login';
-  if(!email||!pass){showToast('入力してください');return;}
+// =============================================
+// 新Auth UI
+// =============================================
+let selectedTeam = '';
 
-  if(mode==='register'){
-    const username = document.getElementById('authUsername').value.trim() || email.split('@')[0];
-    const favTeam  = document.getElementById('authFavTeam').value;
-    const {error} = await _supa.auth.signUp({
-      email, password:pass,
-      options:{data:{username, favorite_team:favTeam}}
-    });
-    if(error){showToast('エラー: '+error.message);return;}
-    showToast('登録しました！確認メールをチェックしてください');
-  } else {
-    const {error} = await _supa.auth.signInWithPassword({email,password:pass});
-    if(error){showToast('エラー: '+error.message);return;}
-    showToast('ログインしました');
-  }
+function showAuthView(view){
+  ['login','reg1','reg2'].forEach(v=>{
+    document.getElementById('authView'+v.charAt(0).toUpperCase()+v.slice(1)).style.display = v===view?'':'none';
+  });
+  if(view==='reg2') buildTeamPicker();
+}
+
+function togglePw(id, btn){
+  const el = document.getElementById(id);
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
+
+function buildTeamPicker(){
+  const grid = document.getElementById('teamPickerGrid');
+  if(grid.children.length) return;
+  const teams = [
+    {id:'tigers',em:'🐯',name:'阪神'},
+    {id:'giants',em:'🐰',name:'巨人'},
+    {id:'carp',em:'🎏',name:'広島'},
+    {id:'dragons',em:'🐉',name:'中日'},
+    {id:'swallows',em:'🦢',name:'ヤクルト'},
+    {id:'baystars',em:'⭐',name:'DeNA'},
+    {id:'hawks',em:'🦅',name:'SB'},
+    {id:'lions',em:'🦁',name:'西武'},
+    {id:'eagles',em:'🦅',name:'楽天'},
+    {id:'fighters',em:'🦊',name:'日ハム'},
+    {id:'marines',em:'🌊',name:'ロッテ'},
+    {id:'buffaloes',em:'🐃',name:'オリックス'},
+  ];
+  grid.innerHTML = teams.map(t=>`
+    <div class="team-badge" data-team="${t.id}" onclick="selectTeam(this,'${t.id}')">
+      <span class="team-badge-em">${t.em}</span>
+      <span class="team-badge-name">${t.name}</span>
+    </div>`).join('');
+}
+
+function selectTeam(el, team){
+  document.querySelectorAll('.team-badge').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTeam = team;
+}
+
+function goToStep2(){
+  const username = document.getElementById('regUsername').value.trim();
+  const email    = document.getElementById('regEmail').value.trim();
+  const pass     = document.getElementById('regPass').value;
+  if(!username){showToast('ユーザー名を入力してください');return;}
+  if(!email){showToast('メールアドレスを入力してください');return;}
+  if(pass.length < 6){showToast('パスワードは6文字以上にしてください');return;}
+  showAuthView('reg2');
+}
+
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  if(!email||!pass){showToast('入力してください');return;}
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'ログイン中...';
+  const {error} = await _supa.auth.signInWithPassword({email, password:pass});
+  btn.disabled = false; btn.textContent = 'ログイン';
+  if(error){showToast('メールアドレスかパスワードが違います');return;}
+  showToast('ログインしました！');
   closeModal('authModal');
+}
+
+async function doRegister(){
+  const username = document.getElementById('regUsername').value.trim();
+  const email    = document.getElementById('regEmail').value.trim();
+  const pass     = document.getElementById('regPass').value;
+  const btn = document.getElementById('regBtn');
+  btn.disabled = true; btn.textContent = '登録中...';
+  const {error} = await _supa.auth.signUp({
+    email, password: pass,
+    options:{data:{username, favorite_team: selectedTeam || 'other'}}
+  });
+  btn.disabled = false; btn.textContent = '登録する 🎊';
+  if(error){showToast('エラー: '+error.message);return;}
+  showToast('登録完了！ようこそ NPB掲示板へ 🎉');
+  closeModal('authModal');
+}
+
+// 旧関数（後方互換）
+async function submitAuth(){ doLogin(); }
+function switchAuth(mode, btn){
+  showAuthView(mode==='register'?'reg1':'login');
 }
 
 async function saveFavTeam(){
@@ -1040,7 +1171,10 @@ function showTab(el, name){
   if(name==='bbs') loadThreads();
 }
 
-function openModal(id){ document.getElementById(id).classList.add('open'); }
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='authModal') showAuthView('login');
+}
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 function switchAuth(mode, btn){
