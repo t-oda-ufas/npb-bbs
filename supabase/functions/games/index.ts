@@ -51,7 +51,7 @@ async function scrapeYahoo() {
   const html = await res.text();
 
   const games: any[] = [];
-  const itemRegex = /(<li class="bb-score__item[^"]*">[\s\S]*?)<\/li>/g;
+  const itemRegex = /(<li class="bb-score__item[^"]*">[\s\S]*?<\/a>)\s*<\/li>/g;
   let match;
 
   while ((match = itemRegex.exec(html)) !== null) {
@@ -105,11 +105,28 @@ async function scrapeYahoo() {
       awayScore = awayScoreMatch ? parseInt(awayScoreMatch[1]) : null;
     }
 
+    // 投手情報
+    const homePlayerMatch = /bb-score__playerHome[\s\S]*?bb-score__player[^>]*>([^<]+)</.exec(item);
+    const awayPlayerMatch = /bb-score__playerAway[\s\S]*?bb-score__player[^>]*>([^<]+)</.exec(item);
+    const parsePlayer = (raw: string | undefined) => {
+      if (!raw) return null;
+      const m = /^\(([^)]+)\)(.+)$/.exec(raw.trim());
+      return m ? { prefix: m[1], name: m[2] } : null;
+    };
+    const homePlayer = parsePlayer(homePlayerMatch?.[1]);
+    const awayPlayer = parsePlayer(awayPlayerMatch?.[1]);
+    const labelMap: Record<string, string> = { 予:'予告先発', 投:'登板中', 勝:'勝利投手', 負:'敗戦投手', S:'セーブ' };
+    const toPitcher = (p: { prefix: string; name: string } | null) =>
+      p && p.prefix !== '打' ? { name: p.name, label: labelMap[p.prefix] ?? p.prefix } : null;
+    const homePitcher = toPitcher(homePlayer);
+    const awayPitcher = toPitcher(awayPlayer);
+
     games.push({
       id: gameId,
       home: home.name, homeEm: home.em, homeTeam: home.id,
       away: away.name, awayEm: away.em, awayTeam: away.id,
-      homeScore, awayScore, status, venue, inning, startTime, comments: 0,
+      homeScore, awayScore, status, venue, inning, startTime,
+      homePitcher, awayPitcher, comments: 0,
     });
   }
   return games;
