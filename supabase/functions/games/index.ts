@@ -51,7 +51,7 @@ async function scrapeYahoo() {
   const html = await res.text();
 
   const games: any[] = [];
-  const itemRegex = /<li class="bb-score__item">([\s\S]*?)<\/li>/g;
+  const itemRegex = /(<li class="bb-score__item[^"]*">[\s\S]*?)<\/li>/g;
   let match;
 
   while ((match = itemRegex.exec(html)) !== null) {
@@ -75,39 +75,41 @@ async function scrapeYahoo() {
     const home = TEAM_MAP[homeName] ?? { id: 'other', name: homeName, em: '⚾', league: 'c' };
     const away = TEAM_MAP[awayName] ?? { id: 'other', name: awayName, em: '⚾', league: 'c' };
 
-    // ステータス（時刻 or 終了 or 回表/裏）
-    const statusMatch = /bb-score__status[^>]*>([^<]+)</.exec(item);
-    const statusText = statusMatch?.[1].trim() ?? '';
+    // ステータス（liクラスで判定）
+    const isLive = item.includes('bb-score__item--live');
+    const isEnd  = item.includes('bb-score__item--end');
 
-    // スコア（終了・進行中の場合）
-    const homeRunMatch = /bb-score__runHome[^>]*>(\d+)</.exec(item);
-    const awayRunMatch = /bb-score__runAway[^>]*>(\d+)</.exec(item);
-    // 別パターン：数値をスコアラップから取得
-    const scoreNums = [...item.matchAll(/bb-score__run[^>]*>(\d+)</g)].map(m => parseInt(m[1]));
+    // スコア（bb-score__score--left/right）
+    const homeScoreMatch = /bb-score__score--left[^>]*>\s*(\d+)\s*</.exec(item);
+    const awayScoreMatch = /bb-score__score--right[^>]*>\s*(\d+)\s*</.exec(item);
+
+    // 回表・回裏情報
+    const inningMatch = /bb-score__link[^>]*>([^<]+)</.exec(item);
+    const inning = inningMatch?.[1].trim() ?? '';
+
+    // 試合開始時刻（未開始の場合）
+    const timeMatch = /bb-score__status[^>]*>\s*(\d{1,2}:\d{2})\s*</.exec(item);
+    const startTime = timeMatch?.[1] ?? '';
 
     let status = 'scheduled';
     let homeScore: number | null = null;
     let awayScore: number | null = null;
 
-    if (homeRunMatch && awayRunMatch) {
-      homeScore = parseInt(homeRunMatch[1]);
-      awayScore = parseInt(awayRunMatch[1]);
-      status = statusText.includes('終了') ? 'end' : 'live';
-    } else if (scoreNums.length >= 2) {
-      homeScore = scoreNums[0];
-      awayScore = scoreNums[1];
-      status = statusText.includes('終了') ? 'end' : 'live';
-    } else if (statusText.includes('終了')) {
+    if (isEnd) {
       status = 'end';
-    } else if (statusText && !/^\d{1,2}:\d{2}$/.test(statusText)) {
+      homeScore = homeScoreMatch ? parseInt(homeScoreMatch[1]) : null;
+      awayScore = awayScoreMatch ? parseInt(awayScoreMatch[1]) : null;
+    } else if (isLive) {
       status = 'live';
+      homeScore = homeScoreMatch ? parseInt(homeScoreMatch[1]) : null;
+      awayScore = awayScoreMatch ? parseInt(awayScoreMatch[1]) : null;
     }
 
     games.push({
       id: gameId,
       home: home.name, homeEm: home.em, homeTeam: home.id,
       away: away.name, awayEm: away.em, awayTeam: away.id,
-      homeScore, awayScore, status, venue, comments: 0,
+      homeScore, awayScore, status, venue, inning, startTime, comments: 0,
     });
   }
   return games;

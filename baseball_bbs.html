@@ -1000,10 +1000,10 @@ function gameRowHTML(g){
     ? `<span class="score ${homeWin?'win':''}">${g.homeScore}</span><span class="sep">—</span><span class="score ${awayWin?'win':''}">${g.awayScore}</span>`
     : `<span style="font-size:12px;color:var(--text3)">試合前</span>`;
   const badgeHTML = g.status==='live'
-    ? `<span class="badge live">● LIVE</span>`
+    ? `<span class="badge live">● ${g.inning||'LIVE'}</span>`
     : g.status==='end'
     ? `<span class="badge end">終了</span>`
-    : `<span class="badge end" style="color:var(--text2)">予定</span>`;
+    : `<span class="badge end" style="color:var(--text2)">${g.startTime||'予定'}</span>`;
   return `<div class="game-row" onclick="openGameDetail('${g.id}')">
     <div class="game-row-main">
       <div class="team"><span class="team-em">${g.homeEm}</span><span class="team-nm">${g.home}</span></div>
