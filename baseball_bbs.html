@@ -66,7 +66,7 @@ nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-b
 .card-hd .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
 
 /* GAME ROWS */
-.game-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s;gap:10px}
+.game-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
 .game-row:last-child{border-bottom:none}
 .game-row:hover{background:var(--bg3)}
 .team{display:flex;align-items:center;gap:6px;width:100px}
@@ -81,7 +81,9 @@ nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-b
 .badge.live{background:rgba(232,69,69,.15);color:var(--red);animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 .comment-ct{display:flex;align-items:center;gap:4px;color:var(--text3);font-size:11px;margin-left:4px}
-.game-venue{font-size:10px;color:var(--text3);white-space:nowrap;margin-left:2px}
+.game-row-main{display:flex;align-items:center;width:100%;gap:10px}
+.game-row-center{display:flex;flex-direction:column;align-items:center;margin:0 auto}
+.game-venue{font-size:10px;color:var(--text3);margin-top:3px;white-space:nowrap}
 
 /* NEWS */
 .news-row{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
@@ -1003,12 +1005,16 @@ function gameRowHTML(g){
     ? `<span class="badge end">終了</span>`
     : `<span class="badge end" style="color:var(--text2)">予定</span>`;
   return `<div class="game-row" onclick="openGameDetail('${g.id}')">
-    <div class="team"><span class="team-em">${g.homeEm}</span><span class="team-nm">${g.home}</span></div>
-    <div class="score-wrap">${scoreHTML}</div>
-    <div class="team" style="justify-content:flex-end"><span class="team-nm">${g.away}</span><span class="team-em">${g.awayEm}</span></div>
-    ${badgeHTML}
-    ${g.venue?`<span class="game-venue">📍${g.venue}</span>`:''}
-    <div class="comment-ct">💬 <span>${g.comments||0}</span></div>
+    <div class="game-row-main">
+      <div class="team"><span class="team-em">${g.homeEm}</span><span class="team-nm">${g.home}</span></div>
+      <div class="game-row-center">
+        <div class="score-wrap">${scoreHTML}</div>
+        ${g.venue?`<div class="game-venue">📍 ${g.venue}</div>`:''}
+      </div>
+      <div class="team" style="justify-content:flex-end"><span class="team-nm">${g.away}</span><span class="team-em">${g.awayEm}</span></div>
+      ${badgeHTML}
+      <div class="comment-ct">💬 <span>${g.comments||0}</span></div>
+    </div>
   </div>`;
 }
 
