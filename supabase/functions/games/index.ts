@@ -73,28 +73,25 @@ async function scrapeYahoo() {
     const home = TEAM_MAP[homeName] ?? { id: 'other', name: homeName, em: '⚾', league: 'c' };
     const away = TEAM_MAP[awayName] ?? { id: 'other', name: awayName, em: '⚾', league: 'c' };
 
-    const isLive = item.includes('bb-score__item--live');
-    const isEnd  = item.includes('bb-score__item--end');
+    // bb-score__link のテキストで判定（試合終了 or イニング or 見どころ）
+    const linkMatch = /bb-score__link[^>]*>([^<]+)</.exec(item);
+    const linkText = linkMatch?.[1].trim() ?? '';
+    const isEnd  = linkText === '試合終了';
+    const isLive = !isEnd && item.includes('bb-score__item--live');
 
     const homeScoreMatch = /bb-score__score--left[^>]*>\s*(\d+)\s*</.exec(item);
     const awayScoreMatch = /bb-score__score--right[^>]*>\s*(\d+)\s*</.exec(item);
 
-    const inningMatch = /bb-score__link[^>]*>([^<]+)</.exec(item);
-    const inning = inningMatch?.[1].trim() ?? '';
-
     const timeMatch = /bb-score__status[^>]*>\s*(\d{1,2}:\d{2})\s*</.exec(item);
     const startTime = timeMatch?.[1] ?? '';
+    const inning = isLive ? linkText : '';
 
     let status = 'scheduled';
     let homeScore: number | null = null;
     let awayScore: number | null = null;
 
-    if (isEnd) {
-      status = 'end';
-      homeScore = homeScoreMatch ? parseInt(homeScoreMatch[1]) : null;
-      awayScore = awayScoreMatch ? parseInt(awayScoreMatch[1]) : null;
-    } else if (isLive) {
-      status = 'live';
+    if (isEnd || isLive) {
+      status = isEnd ? 'end' : 'live';
       homeScore = homeScoreMatch ? parseInt(homeScoreMatch[1]) : null;
       awayScore = awayScoreMatch ? parseInt(awayScoreMatch[1]) : null;
     }
