@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPB掲示板</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- ★ 下の2行をあなたのプロジェクト情報に書き換えてください -->
+<script>
+  const SUPABASE_URL = '__SUPABASE_URL__';
+  const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+  window.SUPABASE_NEWS_URL = SUPABASE_URL + '/functions/v1/news';
+  window.SUPABASE_GAMES_URL = SUPABASE_URL + '/functions/v1/games';
+  window.SUPABASE_STANDINGS_URL = SUPABASE_URL + '/functions/v1/standings';
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f14;
+  --bg2: #161820;
+  --bg3: #1e2028;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e8eaf0;
+  --text2: #9098b0;
+  --text3: #5a6278;
+  --accent: #00c87a;
+  --accent2: #009a5e;
+  --red: #e84545;
+  --amber: #f0a500;
+  --blue: #4e8ef7;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+a{text-decoration:none;color:inherit}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-bottom:1px solid var(--border);background:rgba(13,15,20,0.95);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.logo{font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:var(--accent);letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+.logo span{color:var(--text);font-weight:500}
+.nav-tabs{display:flex;gap:2px;margin-left:20px}
+.nav-tab{padding:6px 14px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;color:var(--text2);transition:.15s}
+.nav-tab:hover{color:var(--text);background:var(--bg3)}
+.nav-tab.active{color:var(--accent);background:rgba(0,200,122,.1)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.nav-btn{padding:5px 14px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:inherit;transition:.15s}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.nav-btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.nav-btn.primary:hover{background:var(--accent2)}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;cursor:pointer}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:1fr 300px;gap:20px;max-width:1080px;margin:0 auto;padding:24px 16px}
+@media(max-width:720px){.layout{grid-template-columns:1fr}.sidebar{display:none}}
+
+/* SECTION HEADER */
+.section-hd{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.section-hd h2{font-family:'Oswald',sans-serif;font-size:13px;font-weight:500;letter-spacing:.1em;color:var(--text2);text-transform:uppercase}
+.section-hd .line{flex:1;height:1px;background:var(--border)}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.card-hd{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+.card-hd .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+/* GAME ROWS */
+.game-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s;gap:10px}
+.game-row:last-child{border-bottom:none}
+.game-row:hover{background:var(--bg3)}
+.team{display:flex;align-items:center;gap:6px;width:100px}
+.team-em{font-size:16px}
+.team-nm{font-size:13px;font-weight:500;color:var(--text)}
+.score-wrap{display:flex;align-items:center;gap:6px;margin:0 auto}
+.score{font-family:'Oswald',sans-serif;font-size:22px;font-weight:700;width:28px;text-align:center;color:var(--text)}
+.score.win{color:var(--accent)}
+.sep{font-size:12px;color:var(--text3)}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.04em}
+.badge.end{background:rgba(255,255,255,.06);color:var(--text3)}
+.badge.live{background:rgba(232,69,69,.15);color:var(--red);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.comment-ct{display:flex;align-items:center;gap:4px;color:var(--text3);font-size:11px;margin-left:4px}
+
+/* NEWS */
+.news-row{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.news-row:last-child{border-bottom:none}
+.news-row:hover{background:var(--bg3)}
+.news-title{font-size:13px;line-height:1.6;color:var(--text);margin-bottom:6px}
+.news-meta{display:flex;align-items:center;gap:8px}
+.team-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.03em}
+.tag-tigers{background:rgba(240,165,0,.15);color:var(--amber)}
+.tag-giants{background:rgba(78,142,247,.15);color:var(--blue)}
+.tag-carp{background:rgba(232,69,69,.15);color:var(--red)}
+.tag-lions{background:rgba(78,142,247,.12);color:#7eb3ff}
+.tag-hawks{background:rgba(240,165,0,.12);color:#ffc850}
+.tag-dragons{background:rgba(0,200,122,.1);color:var(--accent)}
+.news-time{font-size:11px;color:var(--text3)}
+.news-src{font-size:11px;color:var(--text3)}
+
+/* THREAD LIST */
+.thread-row{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.thread-row:last-child{border-bottom:none}
+.thread-row:hover{background:var(--bg3)}
+.thread-title{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:5px}
+.thread-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text3)}
+
+/* FAV BANNER */
+.fav-banner{background:linear-gradient(135deg,rgba(0,200,122,.08),rgba(0,200,122,.03));border:1px solid rgba(0,200,122,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.fav-em{font-size:28px}
+.fav-lbl{font-size:10px;color:var(--text3);margin-bottom:2px}
+.fav-team{font-size:14px;font-weight:700;color:var(--accent)}
+.fav-change{margin-left:auto;font-size:11px;color:var(--text3);cursor:pointer;padding:4px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);transition:.12s}
+.fav-change:hover{border-color:var(--accent);color:var(--accent)}
+
+/* NEW THREAD BTN */
+.new-thread-btn{width:100%;padding:10px;border-radius:var(--radius-sm);border:1px dashed var(--border2);background:transparent;color:var(--text3);font-family:inherit;font-size:12px;cursor:pointer;transition:.15s;margin-top:4px}
+.new-thread-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:480px;max-width:95vw;overflow:hidden}
+.modal-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-hd h3{font-size:15px;font-weight:700}
+.modal-close{background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer;line-height:1;padding:4px}
+.modal-body{padding:20px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;color:var(--text2);margin-bottom:6px;display:block}
+.form-input,.form-select,.form-textarea{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:.15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-select option{background:var(--bg3)}
+.form-textarea{resize:vertical;min-height:80px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.btn{padding:8px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:.15s}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{color:var(--text)}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:var(--accent2)}
+
+/* DETAIL VIEW */
+.detail-view{display:none}
+.detail-view.open{display:block}
+.main-view{}
+.back-btn{display:flex;align-items:center;gap:6px;color:var(--text2);font-size:13px;cursor:pointer;margin-bottom:16px;padding:6px 0;border:none;background:transparent;font-family:inherit;transition:.12s}
+.back-btn:hover{color:var(--accent)}
+.detail-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.detail-title{font-size:18px;font-weight:700;line-height:1.5;margin-bottom:12px}
+.detail-meta{display:flex;gap:12px;font-size:12px;color:var(--text3);margin-bottom:16px}
+.detail-body{font-size:13px;color:var(--text2);line-height:1.8}
+.comment-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.comment-hd{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700}
+.comment-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px}
+.comment-item:last-child{border-bottom:none}
+.comment-av{width:28px;height:28px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0}
+.comment-content{}
+.comment-user{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:3px}
+.comment-text{font-size:13px;line-height:1.6;color:var(--text)}
+.comment-time{font-size:10px;color:var(--text3);margin-top:4px}
+.like-btn{display:flex;align-items:center;gap:4px;margin-top:6px;padding:3px 8px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;transition:.15s;font-family:inherit}
+.like-btn:hover,.like-btn.liked{border-color:var(--red);color:var(--red);background:rgba(232,69,69,.08)}
+.comment-input-wrap{padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end}
+.comment-input{flex:1;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:inherit;font-size:13px;outline:none;resize:none;min-height:38px;transition:.15s}
+.comment-input:focus{border-color:var(--accent)}
+.comment-submit{padding:8px 16px;border-radius:var(--radius-sm);background:var(--accent);color:#000;font-weight:700;border:none;cursor:pointer;font-family:inherit;font-size:12px;white-space:nowrap;transition:.15s}
+.comment-submit:hover{background:var(--accent2)}
+
+/* LOGIN MODAL */
+.login-note{font-size:12px;color:var(--text3);text-align:center;margin-top:8px}
+.login-note span{color:var(--accent);cursor:pointer}
+
+/* AUTH FORM */
+.auth-tabs{display:flex;margin-bottom:20px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border2)}
+.auth-tab{flex:1;padding:8px;text-align:center;font-size:13px;cursor:pointer;color:var(--text2);transition:.12s;background:transparent;border:none;font-family:inherit}
+.auth-tab.active{background:var(--accent);color:#000;font-weight:700}
+
+/* STANDING-LIKE MINI TABLE */
+.stand-row{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);font-size:12px;gap:6px}
+.stand-row:last-child{border-bottom:none}
+.stand-rank{width:16px;color:var(--text3);font-weight:700;text-align:center;flex-shrink:0}
+.stand-em{font-size:14px;flex-shrink:0}
+.stand-name{flex:1;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stand-wins{color:var(--accent);font-weight:700;width:26px;text-align:right;flex-shrink:0}
+.stand-col{color:var(--text2);width:26px;text-align:right;font-size:12px;flex-shrink:0}
+.stand-gb{color:var(--text3);width:32px;text-align:right;flex-shrink:0}
+
+/* STANDINGS MOBILE/DESKTOP 切り替え */
+.standings-mobile{display:none}
+@media(max-width:720px){.standings-mobile{display:block}}
+
+/* RESPONSIVE */
+@media(max-width:640px){
+  nav{padding:0 10px;gap:4px}
+  .logo span{display:none}
+  .nav-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:1;min-width:0}
+  .nav-tabs::-webkit-scrollbar{display:none}
+  .nav-tab{padding:6px 10px;font-size:12px;white-space:nowrap;flex-shrink:0}
+  .nav-btn:not(.primary){display:none}
+  .nav-btn.primary{padding:5px 10px;font-size:11px}
+}
+@media(max-width:480px){
+  .layout{padding:12px 8px;gap:12px}
+  .game-row{padding:10px 12px;gap:6px}
+  .team{width:72px}
+  .team-nm{font-size:12px}
+  .score{font-size:18px;width:22px}
+  .comment-ct{display:none}
+  .stand-draws{display:none}
+  .stand-col{width:24px;font-size:11px}
+  .stand-wins{width:24px}
+  .stand-gb{width:30px;font-size:11px}
+  .stand-name{font-size:11px}
+  .badge{padding:2px 5px;font-size:9px}
+  .news-meta{flex-wrap:wrap;gap:4px}
+  .detail-title{font-size:15px}
+  .comment-input-wrap{padding:10px 12px}
+}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--accent);color:var(--accent);padding:10px 18px;border-radius:var(--radius);font-size:13px;z-index:300;transform:translateY(60px);opacity:0;transition:.3s}
+.toast.show{transform:translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">⚾ <span>NPB</span>掲示板</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="showTab(this,'top')">トップ</div>
+    <div class="nav-tab" onclick="showTab(this,'games')">試合結果</div>
+    <div class="nav-tab" onclick="showTab(this,'news')">ニュース</div>
+    <div class="nav-tab" onclick="showTab(this,'bbs')">掲示板</div>
+  </div>
+  <div class="nav-right" id="navRight">
+    <button class="nav-btn" onclick="openModal('authModal')">ログイン</button>
+    <button class="nav-btn primary" onclick="openModal('authModal')">会員登録</button>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT AREA -->
+<div id="appContent">
+
+<!-- ===== TOP TAB ===== -->
+<div id="tab-top">
+<div class="layout">
+  <div>
+    <!-- GAMES SECTION -->
+    <div class="section-hd"><h2 id="gameDateHd">今日の試合</h2><div class="line"></div></div>
+    <div class="card" id="gamesCardTop">
+      <div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">読み込み中...</div>
+    </div>
+
+    <!-- STANDINGS SECTION (モバイルのみ) -->
+    <div class="standings-mobile">
+      <div class="section-hd"><h2>順位表</h2><div class="line"></div></div>
+      <div class="card" id="standingsCardMobile" style="margin-bottom:16px">
+        <div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">読み込み中...</div>
+      </div>
+    </div>
+
+    <!-- NEWS SECTION -->
+    <div class="section-hd"><h2>最新ニュース</h2><div class="line"></div></div>
+    <div class="card" id="newsCardTop"></div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="fav-banner" id="favBanner">
+      <div class="fav-em fav-em-display">⚾</div>
+      <div>
+        <div class="fav-lbl">お気に入り球団</div>
+        <div class="fav-team fav-team-display" id="favTeamName">ログインして設定</div>
+      </div>
+      <div class="fav-change" onclick="openModal('favModal')">変更</div>
+    </div>
+
+    <div class="section-hd"><h2>順位表</h2><div class="line"></div></div>
+    <div class="card" id="standingsCard" style="margin-bottom:16px">
+      <div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">読み込み中...</div>
+    </div>
+
+    <div class="section-hd"><h2>最新スレッド</h2><div class="line"></div></div>
+    <div class="card" id="sideThreadList"></div>
+    <button class="new-thread-btn" onclick="openModal('newThreadModal')">＋ スレッドを作成</button>
+  </div>
+</div>
+</div>
+
+<!-- ===== GAMES TAB ===== -->
+<div id="tab-games" style="display:none">
+<div class="layout" style="grid-template-columns:1fr">
+  <div>
+    <div class="section-hd"><h2>試合結果 · 2026年6月</h2><div class="line"></div></div>
+    <div class="card" id="gamesFullList"></div>
+  </div>
+</div>
+</div>
+
+<!-- ===== NEWS TAB ===== -->
+<div id="tab-news" style="display:none">
+<div class="layout" style="grid-template-columns:1fr">
+  <div>
+    <div class="section-hd"><h2>野球ニュース</h2><div class="line"></div></div>
+    <div class="card" id="newsFullList"></div>
+  </div>
+</div>
+</div>
+
+<!-- ===== BBS TAB ===== -->
+<div id="tab-bbs" style="display:none">
+<div class="layout">
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="section-hd" style="margin-bottom:0;flex:1"><h2>掲示板</h2><div class="line"></div></div>
+      <button class="btn btn-primary" onclick="openModal('newThreadModal')" style="margin-left:12px;font-size:12px;padding:6px 14px">＋ スレッド作成</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="teamFilter">
+      <button class="nav-btn active" onclick="filterTeam(this,'all')">すべて</button>
+      <button class="nav-btn" onclick="filterTeam(this,'giants')">🟡 巨人</button>
+      <button class="nav-btn" onclick="filterTeam(this,'tigers')">🐯 阪神</button>
+      <button class="nav-btn" onclick="filterTeam(this,'carp')">🔴 広島</button>
+      <button class="nav-btn" onclick="filterTeam(this,'dragons')">🔵 中日</button>
+      <button class="nav-btn" onclick="filterTeam(this,'hawks')">🦅 SB</button>
+      <button class="nav-btn" onclick="filterTeam(this,'lions')">🦁 西武</button>
+    </div>
+    <div class="card" id="bbsThreadList"></div>
+  </div>
+  <div class="sidebar">
+    <div class="fav-banner">
+      <div class="fav-em fav-em-display">⚾</div>
+      <div>
+        <div class="fav-lbl">お気に入り球団</div>
+        <div class="fav-team fav-team-display" id="favTeamName2">ログインして設定</div>
+      </div>
+    </div>
+    <div class="section-hd"><h2>人気スレ</h2><div class="line"></div></div>
+    <div class="card" id="hotThreads"></div>
+  </div>
+</div>
+</div>
+
+</div><!-- /#appContent -->
+
+<!-- ===== DETAIL VIEW (overlays content) ===== -->
+<div id="detailView" class="detail-view">
+<div class="layout" style="grid-template-columns:1fr">
+  <div>
+    <button class="back-btn" onclick="closeDetail()">← 一覧に戻る</button>
+    <div class="detail-card" id="detailCardBody"></div>
+    <div class="comment-box" id="commentBox">
+      <div class="comment-hd">コメント (<span id="commentCount">0</span>)</div>
+      <div id="commentList"></div>
+      <div class="comment-input-wrap">
+        <textarea class="comment-input" id="commentInput" rows="1" placeholder="コメントを入力..."></textarea>
+        <button class="comment-submit" onclick="submitComment()">投稿</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal" onclick="if(event.target===this)closeModal('authModal')">
+<div class="modal">
+  <div class="modal-hd">
+    <h3 id="authTitle">ログイン</h3>
+    <button class="modal-close" onclick="closeModal('authModal')">×</button>
+  </div>
+  <div class="modal-body">
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuth('login',this)">ログイン</button>
+      <button class="auth-tab" onclick="switchAuth('register',this)">新規登録</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">メールアドレス</label>
+      <input type="email" class="form-input" placeholder="example@email.com" id="authEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">パスワード</label>
+      <input type="password" class="form-input" placeholder="パスワード" id="authPass">
+    </div>
+    <div class="form-group" id="registerExtra" style="display:none">
+      <label class="form-label">ユーザー名</label>
+      <input type="text" class="form-input" placeholder="表示名" id="authUsername">
+    </div>
+    <div class="form-group" id="favTeamField" style="display:none">
+      <label class="form-label">お気に入り球団</label>
+      <select class="form-select" id="authFavTeam">
+        <option value="">選択してください</option>
+        <option value="giants">🟡 読売ジャイアンツ</option>
+        <option value="tigers">🐯 阪神タイガース</option>
+        <option value="carp">🔴 広島東洋カープ</option>
+        <option value="dragons">🔵 中日ドラゴンズ</option>
+        <option value="swallows">🦢 東京ヤクルトスワローズ</option>
+        <option value="baystars">💙 横浜DeNAベイスターズ</option>
+        <option value="hawks">🦅 福岡ソフトバンクホークス</option>
+        <option value="lions">🦁 埼玉西武ライオンズ</option>
+        <option value="eagles">🦅 東北楽天ゴールデンイーグルス</option>
+        <option value="fighters">⚾ 北海道日本ハムファイターズ</option>
+        <option value="marines">🌊 千葉ロッテマリーンズ</option>
+        <option value="buffaloes">🐃 オリックス・バファローズ</option>
+      </select>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal('authModal')">キャンセル</button>
+    <button class="btn btn-primary" id="authSubmitBtn" onclick="submitAuth()">ログイン</button>
+  </div>
+</div>
+</div>
+
+<!-- New Thread Modal -->
+<div class="modal-overlay" id="newThreadModal" onclick="if(event.target===this)closeModal('newThreadModal')">
+<div class="modal">
+  <div class="modal-hd">
+    <h3>スレッドを作成</h3>
+    <button class="modal-close" onclick="closeModal('newThreadModal')">×</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label class="form-label">チームを選択</label>
+      <select class="form-select" id="threadTeam">
+        <option value="giants">🟡 巨人</option>
+        <option value="tigers">🐯 阪神</option>
+        <option value="carp">🔴 広島</option>
+        <option value="dragons">🔵 中日</option>
+        <option value="hawks">🦅 ソフトバンク</option>
+        <option value="lions">🦁 西武</option>
+        <option value="other">⚾ その他・雑談</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">タイトル</label>
+      <input type="text" class="form-input" placeholder="スレッドのタイトル" id="threadTitle">
+    </div>
+    <div class="form-group">
+      <label class="form-label">本文（任意）</label>
+      <textarea class="form-textarea" placeholder="最初のメッセージ..." id="threadBody"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal('newThreadModal')">キャンセル</button>
+    <button class="btn btn-primary" onclick="createThread()">作成する</button>
+  </div>
+</div>
+</div>
+
+<!-- Fav Team Modal -->
+<div class="modal-overlay" id="favModal" onclick="if(event.target===this)closeModal('favModal')">
+<div class="modal">
+  <div class="modal-hd">
+    <h3>お気に入り球団を変更</h3>
+    <button class="modal-close" onclick="closeModal('favModal')">×</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label class="form-label">球団を選択</label>
+      <select class="form-select" id="favTeamSelect">
+        <option value="giants">🟡 読売ジャイアンツ</option>
+        <option value="tigers" selected>🐯 阪神タイガース</option>
+        <option value="carp">🔴 広島東洋カープ</option>
+        <option value="dragons">🔵 中日ドラゴンズ</option>
+        <option value="swallows">🦢 東京ヤクルトスワローズ</option>
+        <option value="baystars">💙 横浜DeNAベイスターズ</option>
+        <option value="hawks">🦅 福岡ソフトバンクホークス</option>
+        <option value="lions">🦁 埼玉西武ライオンズ</option>
+        <option value="eagles">🦅 東北楽天ゴールデンイーグルス</option>
+        <option value="fighters">⚾ 北海道日本ハムファイターズ</option>
+        <option value="marines">🌊 千葉ロッテマリーンズ</option>
+        <option value="buffaloes">🐃 オリックス・バファローズ</option>
+      </select>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal('favModal')">キャンセル</button>
+    <button class="btn btn-primary" onclick="saveFavTeam()">保存</button>
+  </div>
+</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+// Supabase初期化
+// =============================================
+const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// =============================================
+// 定数・状態
+// =============================================
+const TEAMS = {
+  giants:{name:'読売ジャイアンツ',em:'🐰',cls:'tag-giants'},
+  tigers:{name:'阪神タイガース',em:'🐯',cls:'tag-tigers'},
+  carp:{name:'広島東洋カープ',em:'🎏',cls:'tag-carp'},
+  dragons:{name:'中日ドラゴンズ',em:'🐉',cls:'tag-dragons'},
+  hawks:{name:'福岡ソフトバンクホークス',em:'🦅',cls:'tag-hawks'},
+  lions:{name:'埼玉西武ライオンズ',em:'🦁',cls:'tag-lions'},
+  swallows:{name:'東京ヤクルトスワローズ',em:'🦢',cls:'tag-swallows'},
+  baystars:{name:'横浜DeNAベイスターズ',em:'⭐',cls:'tag-baystars'},
+  eagles:{name:'東北楽天ゴールデンイーグルス',em:'🦅',cls:'tag-eagles'},
+  fighters:{name:'北海道日本ハムファイターズ',em:'🦊',cls:'tag-fighters'},
+  marines:{name:'千葉ロッテマリーンズ',em:'🌊',cls:'tag-marines'},
+  buffaloes:{name:'オリックス・バファローズ',em:'🐃',cls:'tag-buffaloes'},
+  other:{name:'その他',em:'⚾',cls:''}
+};
+
+const TEAM_KEYWORDS = {
+  giants:['巨人','ジャイアンツ','読売'],
+  tigers:['阪神','タイガース'],
+  carp:['広島','カープ'],
+  dragons:['中日','ドラゴンズ'],
+  hawks:['ソフトバンク','ホークス'],
+  lions:['西武','ライオンズ'],
+  swallows:['ヤクルト','スワローズ'],
+  baystars:['DeNA','ベイスターズ','横浜'],
+  eagles:['楽天','イーグルス'],
+  fighters:['日本ハム','ファイターズ'],
+  marines:['ロッテ','マリーンズ'],
+  buffaloes:['オリックス','バファローズ'],
+};
+
+function detectTeam(text){
+  for(const [team,kws] of Object.entries(TEAM_KEYWORDS)){
+    if(kws.some(k=>text.includes(k))) return team;
+  }
+  return 'other';
+}
+
+function timeAgo(dateStr){
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if(diff < 3600) return Math.floor(diff/60)+'分前';
+  if(diff < 86400) return Math.floor(diff/3600)+'時間前';
+  return Math.floor(diff/86400)+'日前';
+}
+
+let newsData = [];
+let gamesData = [];
+const CL_TEAMS = new Set(['giants','tigers','carp','dragons','swallows','baystars']);
+const FALLBACK_GAMES = [
+  {id:'carp-giants',home:'広島',homeEm:'🎏',homeTeam:'carp',away:'巨人',awayEm:'🐰',awayTeam:'giants',homeScore:1,awayScore:1,status:'live',comments:41},
+  {id:'tigers-dragons',home:'阪神',homeEm:'🐯',homeTeam:'tigers',away:'中日',awayEm:'🐉',awayTeam:'dragons',homeScore:5,awayScore:3,status:'end',comments:24},
+  {id:'lions-hawks',home:'西武',homeEm:'🦁',homeTeam:'lions',away:'SB',awayEm:'🦅',awayTeam:'hawks',homeScore:2,awayScore:4,status:'end',comments:18},
+  {id:'eagles-fighters',home:'楽天',homeEm:'🦅',homeTeam:'eagles',away:'日ハム',awayEm:'🦊',awayTeam:'fighters',homeScore:3,awayScore:6,status:'end',comments:12},
+  {id:'baystars-swallows',home:'DeNA',homeEm:'⭐',homeTeam:'baystars',away:'ヤクルト',awayEm:'🦢',awayTeam:'swallows',homeScore:4,awayScore:2,status:'end',comments:9},
+];
+const FALLBACK_STANDINGS = {
+  central:[
+    {rank:1,name:'阪神',em:'🐯',wins:38,losses:22,gb:'—'},
+    {rank:2,name:'巨人',em:'🟡',wins:35,losses:25,gb:'3.0'},
+    {rank:3,name:'中日',em:'🔵',wins:30,losses:30,gb:'8.0'},
+    {rank:4,name:'広島',em:'🔴',wins:29,losses:31,gb:'9.0'},
+    {rank:5,name:'DeNA',em:'💙',wins:27,losses:33,gb:'11.0'},
+    {rank:6,name:'ヤクルト',em:'🦢',wins:22,losses:38,gb:'16.0'},
+  ],
+  pacific:[
+    {rank:1,name:'SB',em:'🦅',wins:40,losses:20,gb:'—'},
+    {rank:2,name:'日ハム',em:'⚾',wins:36,losses:24,gb:'4.0'},
+    {rank:3,name:'ロッテ',em:'🌊',wins:31,losses:29,gb:'9.0'},
+    {rank:4,name:'楽天',em:'🦅',wins:29,losses:31,gb:'11.0'},
+    {rank:5,name:'オリックス',em:'🐃',wins:27,losses:33,gb:'13.0'},
+    {rank:6,name:'西武',em:'🦁',wins:24,losses:36,gb:'16.0'},
+  ],
+};
+
+let currentDetail = null;
+let currentUser = null;
+let currentProfile = null;
+let currentFilter = 'all';
+
+// =============================================
+// Supabase Auth
+// =============================================
+async function initAuth(){
+  const {data:{session}} = await _supa.auth.getSession();
+  if(session){
+    currentUser = session.user;
+    await loadProfile();
+    updateNavUI();
+  }
+  _supa.auth.onAuthStateChange(async (_event, session)=>{
+    currentUser = session?.user || null;
+    if(currentUser) await loadProfile();
+    else currentProfile = null;
+    updateNavUI();
+  });
+}
+
+async function loadProfile(){
+  if(!currentUser) return;
+  const {data} = await _supa.from('profiles').select('*').eq('id',currentUser.id).single();
+  currentProfile = data;
+  if(data){
+    document.querySelectorAll('.fav-team-display').forEach(el=>el.textContent=TEAMS[data.favorite_team]?.name||data.favorite_team);
+    document.querySelectorAll('.fav-em-display').forEach(el=>el.textContent=TEAMS[data.favorite_team]?.em||'⚾');
+  }
+}
+
+function updateNavUI(){
+  const el = document.getElementById('navRight');
+  if(currentUser && currentProfile){
+    const initial = (currentProfile.username||'U')[0];
+    el.innerHTML = `<div class="avatar" onclick="openModal('favModal')" title="お気に入り設定">${initial}</div>`;
+  } else {
+    el.innerHTML = `<button class="nav-btn" onclick="openModal('authModal')">ログイン</button><button class="nav-btn primary" onclick="openModal('authModal')">会員登録</button>`;
+    document.querySelectorAll('.fav-em-display').forEach(el=>el.textContent='⚾');
+    document.querySelectorAll('.fav-team-display').forEach(el=>el.textContent='ログインして設定');
+  }
+}
+
+async function submitAuth(){
+  const email = document.getElementById('authEmail').value.trim();
+  const pass  = document.getElementById('authPass').value;
+  const mode  = document.getElementById('authSubmitBtn').dataset.mode || 'login';
+  if(!email||!pass){showToast('入力してください');return;}
+
+  if(mode==='register'){
+    const username = document.getElementById('authUsername').value.trim() || email.split('@')[0];
+    const favTeam  = document.getElementById('authFavTeam').value;
+    const {error} = await _supa.auth.signUp({
+      email, password:pass,
+      options:{data:{username, favorite_team:favTeam}}
+    });
+    if(error){showToast('エラー: '+error.message);return;}
+    showToast('登録しました！確認メールをチェックしてください');
+  } else {
+    const {error} = await _supa.auth.signInWithPassword({email,password:pass});
+    if(error){showToast('エラー: '+error.message);return;}
+    showToast('ログインしました');
+  }
+  closeModal('authModal');
+}
+
+async function saveFavTeam(){
+  const val = document.getElementById('favTeamSelect').value;
+  if(currentUser){
+    await _supa.from('profiles').update({favorite_team:val}).eq('id',currentUser.id);
+    await loadProfile();
+  }
+  closeModal('favModal');
+  showToast('お気に入り球団を変更しました');
+}
+
+// =============================================
+// スレッド (DB連携)
+// =============================================
+async function loadThreads(){
+  const el = document.getElementById('bbsThreadList');
+  el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">読み込み中...</div>';
+  let query = _supa.from('threads')
+    .select('*, profiles(username)')
+    .order('created_at',{ascending:false})
+    .limit(30);
+  if(currentFilter!=='all') query = query.eq('team',currentFilter);
+  const {data,error} = await query;
+  if(error||!data){el.innerHTML='<div style="padding:16px;color:var(--text3);font-size:13px">取得失敗</div>';return;}
+  el.innerHTML = data.length ? data.map(t=>threadRowHTML(t)).join('') : '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">まだスレッドがありません。最初に作成しましょう！</div>';
+}
+
+async function loadSideThreads(){
+  const el = document.getElementById('sideThreadList');
+  const {data} = await _supa.from('threads').select('*, profiles(username)').order('created_at',{ascending:false}).limit(4);
+  if(!data) return;
+  el.innerHTML = data.map(t=>threadRowHTML(t)).join('');
+}
+
+async function loadHotThreads(){
+  const el = document.getElementById('hotThreads');
+  const {data} = await _supa.from('threads').select('*, profiles(username)').order('created_at',{ascending:false}).limit(4);
+  if(!data) return;
+  el.innerHTML = data.map(t=>threadRowHTML(t)).join('');
+}
+
+function threadRowHTML(t){
+  const team = TEAMS[t.team]||TEAMS.other;
+  const user = t.profiles?.username || '名無し';
+  const time = timeAgo(t.created_at);
+  return `<div class="thread-row" onclick="openThreadDetail('${t.id}')">
+    <span class="team-tag ${team.cls}" style="margin-bottom:4px;display:inline-block">${team.em} ${team.name.slice(0,3)}</span>
+    <div class="thread-title">${escHtml(t.title)}</div>
+    <div class="thread-meta">by ${escHtml(user)} · ${time}</div>
+  </div>`;
+}
+
+async function createThread(){
+  const team  = document.getElementById('threadTeam').value;
+  const title = document.getElementById('threadTitle').value.trim();
+  const body  = document.getElementById('threadBody').value.trim();
+  if(!title){showToast('タイトルを入力してください');return;}
+  if(!currentUser){showToast('ログインが必要です');closeModal('newThreadModal');openModal('authModal');return;}
+  const {error} = await _supa.from('threads').insert({user_id:currentUser.id,team,title,body});
+  if(error){showToast('エラー: '+error.message);return;}
+  document.getElementById('threadTitle').value='';
+  document.getElementById('threadBody').value='';
+  closeModal('newThreadModal');
+  showToast('スレッドを作成しました');
+  loadThreads(); loadSideThreads(); loadHotThreads();
+}
+
+async function openThreadDetail(id){
+  currentDetail = {type:'thread',id};
+  const {data:t} = await _supa.from('threads').select('*, profiles(username)').eq('id',id).single();
+  if(!t) return;
+  const team = TEAMS[t.team]||TEAMS.other;
+  document.getElementById('detailCardBody').innerHTML = `
+    <span class="team-tag ${team.cls}" style="display:inline-block;margin-bottom:10px">${team.em} ${team.name}</span>
+    <div class="detail-title">${escHtml(t.title)}</div>
+    <div class="detail-meta"><span>by ${escHtml(t.profiles?.username||'名無し')}</span><span>${timeAgo(t.created_at)}</span></div>
+    ${t.body?`<div class="detail-body" style="margin-top:12px">${escHtml(t.body)}</div>`:''}`;
+  showDetailView();
+  loadComments(id);
+}
+
+// =============================================
+// コメント (DB連携)
+// =============================================
+async function loadComments(targetId){
+  const {data,error} = await _supa.from('comments')
+    .select('*, profiles(username), likes(id,user_id)')
+    .eq('target_id', targetId)
+    .order('created_at',{ascending:true});
+  document.getElementById('commentCount').textContent = data?.length||0;
+  const list = document.getElementById('commentList');
+  if(!data||!data.length){
+    list.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">最初のコメントを投稿しよう！</div>';
+    return;
+  }
+  list.innerHTML = data.map((c,i)=>{
+    const liked = currentUser && c.likes.some(l=>l.user_id===currentUser.id);
+    const likeCount = c.likes.length;
+    return `<div class="comment-item">
+      <div class="comment-av">${(c.profiles?.username||'?')[0]}</div>
+      <div class="comment-content">
+        <div class="comment-user">${escHtml(c.profiles?.username||'名無し')}</div>
+        <div class="comment-text">${escHtml(c.content)}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="comment-time">${timeAgo(c.created_at)}</div>
+          <button class="like-btn ${liked?'liked':''}" onclick="toggleLike(this,'${c.id}')">❤ <span>${likeCount}</span></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function submitComment(){
+  if(!currentUser){showToast('ログインが必要です');openModal('authModal');return;}
+  const input = document.getElementById('commentInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const {error} = await _supa.from('comments').insert({
+    user_id: currentUser.id,
+    target_type: currentDetail.type,
+    target_id: currentDetail.id,
+    content: text,
+  });
+  if(error){showToast('エラー: '+error.message);return;}
+  input.value='';
+  loadComments(currentDetail.id);
+  showToast('コメントを投稿しました');
+}
+
+async function toggleLike(btn, commentId){
+  if(!currentUser){showToast('ログインが必要です');openModal('authModal');return;}
+  const isLiked = btn.classList.contains('liked');
+  const span = btn.querySelector('span');
+  if(isLiked){
+    await _supa.from('likes').delete().eq('user_id',currentUser.id).eq('comment_id',commentId);
+    btn.classList.remove('liked');
+    span.textContent = parseInt(span.textContent)-1;
+  } else {
+    await _supa.from('likes').insert({user_id:currentUser.id,comment_id:commentId});
+    btn.classList.add('liked');
+    span.textContent = parseInt(span.textContent)+1;
+  }
+}
+
+// =============================================
+// ニュース (Edge Function)
+// =============================================
+async function fetchNews(){
+  const EDGE_URL = window.SUPABASE_NEWS_URL || '';
+  if(EDGE_URL){
+    try{
+      const res = await fetch(EDGE_URL, {signal:AbortSignal.timeout(8000)});
+      const data = await res.json();
+      if(data.ok && data.items && data.items.length){
+        newsData = data.items.map(function(item,i){
+          return {id:item.id||'n'+i, team:detectTeam(item.title), title:item.title,
+                  src:item.source||'Google News', time:item.pubDate?timeAgo(item.pubDate):'', link:item.link||''};
+        });
+        renderNewsTop(); renderNewsFull();
+        showToast('ニュースを取得しました ✓');
+        return;
+      }
+    }catch(e){}
+  }
+  newsData = [
+    {id:'n1',team:'tigers',title:'阪神・岡田監督「若手に期待」5連勝で首位浮上',src:'日刊スポーツ',time:'4時間前',link:''},
+    {id:'n2',team:'giants',title:'巨人・坂本が今季初の猛打賞　チームを引っ張る',src:'スポーツ報知',time:'5時間前',link:''},
+    {id:'n3',team:'carp',title:'広島・新外国人選手が来日、キャンプに合流へ',src:'中国新聞',time:'6時間前',link:''},
+    {id:'n4',team:'lions',title:'西武・若手投手がプロ初完投　球団首脳も絶賛',src:'サンスポ',time:'8時間前',link:''},
+    {id:'n5',team:'hawks',title:'ソフトバンク、今季の中間成績を発表',src:'スポニチ',time:'10時間前',link:''},
+    {id:'n6',team:'dragons',title:'中日・新監督が采配の哲学を語る「機動力野球を貫く」',src:'中日スポーツ',time:'12時間前',link:''},
+  ];
+  renderNewsTop(); renderNewsFull();
+}
+
+// =============================================
+// ニュース表示
+// =============================================
+function renderNewsTop(){
+  const el = document.getElementById('newsCardTop');
+  if(!newsData.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">読み込み中...</div>';return;}
+  el.innerHTML = newsData.slice(0,5).map(n=>newsRowHTML(n)).join('');
+}
+function renderNewsFull(){
+  const el = document.getElementById('newsFullList');
+  if(!newsData.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">読み込み中...</div>';return;}
+  el.innerHTML = newsData.map(n=>newsRowHTML(n)).join('');
+}
+function newsRowHTML(n){
+  const t = TEAMS[n.team]||TEAMS.other;
+  return `<div class="news-row" onclick="openNewsDetail('${n.id}')">
+    <div class="news-title">${escHtml(n.title)}</div>
+    <div class="news-meta">
+      <span class="team-tag ${t.cls}">${t.em} ${t.name.slice(0,3)}</span>
+      <span class="news-src">${n.src}</span>
+      <span class="news-time">${n.time}</span>
+      ${n.link?'<span style="color:var(--accent);font-size:10px">↗ 元記事</span>':''}
+    </div>
+  </div>`;
+}
+
+// =============================================
+// 試合取得・表示
+// =============================================
+async function fetchGames(){
+  try{
+    const res = await fetch(window.SUPABASE_GAMES_URL, {
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await res.json();
+    if(data.ok && data.games && data.games.length){
+      gamesData = data.games;
+      const d = new Date(data.date+'T00:00:00+09:00');
+      document.getElementById('gameDateHd').textContent =
+        `今日の試合 · ${d.getMonth()+1}月${d.getDate()}日`;
+      renderGamesTop(); renderGamesFull();
+      if(gamesData.some(g=>g.status==='live')) setTimeout(fetchGames, 60000);
+      return;
+    }
+  }catch(e){}
+  gamesData = FALLBACK_GAMES;
+  renderGamesTop(); renderGamesFull();
+}
+
+function gameRowHTML(g){
+  const hasScore = g.homeScore !== null && g.awayScore !== null;
+  const homeWin = hasScore && g.homeScore > g.awayScore && g.status==='end';
+  const awayWin = hasScore && g.awayScore > g.homeScore && g.status==='end';
+  const scoreHTML = hasScore
+    ? `<span class="score ${homeWin?'win':''}">${g.homeScore}</span><span class="sep">—</span><span class="score ${awayWin?'win':''}">${g.awayScore}</span>`
+    : `<span style="font-size:12px;color:var(--text3)">試合前</span>`;
+  const badgeHTML = g.status==='live'
+    ? `<span class="badge live">● LIVE</span>`
+    : g.status==='end'
+    ? `<span class="badge end">終了</span>`
+    : `<span class="badge end" style="color:var(--text2)">予定</span>`;
+  return `<div class="game-row" onclick="openGameDetail('${g.id}')">
+    <div class="team"><span class="team-em">${g.homeEm}</span><span class="team-nm">${g.home}</span></div>
+    <div class="score-wrap">${scoreHTML}</div>
+    <div class="team" style="justify-content:flex-end"><span class="team-nm">${g.away}</span><span class="team-em">${g.awayEm}</span></div>
+    ${badgeHTML}
+    <div class="comment-ct">💬 <span>${g.comments||0}</span></div>
+  </div>`;
+}
+
+function renderGamesTop(){
+  const el = document.getElementById('gamesCardTop');
+  if(!gamesData.length){
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">本日の試合情報がありません</div>';
+    return;
+  }
+  const central = gamesData.filter(g=>CL_TEAMS.has(g.homeTeam));
+  const pacific  = gamesData.filter(g=>!CL_TEAMS.has(g.homeTeam));
+  let html='';
+  if(central.length) html += '<div class="card-hd"><div class="dot"></div>セ・リーグ</div>'+central.map(gameRowHTML).join('');
+  if(pacific.length)  html += `<div class="card-hd" style="${central.length?'border-top:1px solid var(--border)':''}">パ・リーグ</div>`+pacific.map(gameRowHTML).join('');
+  el.innerHTML = html;
+}
+
+function renderGamesFull(){
+  const el = document.getElementById('gamesFullList');
+  if(!gamesData.length){
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">本日の試合情報がありません</div>';
+    return;
+  }
+  el.innerHTML = gamesData.map(g=>gameRowHTML(g)).join('');
+}
+
+// =============================================
+// 順位表取得・表示
+// =============================================
+async function fetchStandings(){
+  try{
+    const res = await fetch(window.SUPABASE_STANDINGS_URL, {
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await res.json();
+    if(data.ok && (data.central.length || data.pacific.length)){
+      renderStandings(data); return;
+    }
+  }catch(e){}
+  renderStandings(FALLBACK_STANDINGS);
+}
+
+function renderStandings(data){
+  ['standingsCard','standingsCardMobile'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) _renderStandingsEl(el, data);
+  });
+}
+function _renderStandingsEl(el, data){
+  const hd = 'color:var(--text3);font-size:10px;letter-spacing:.05em';
+  const header = `<div class="stand-row" style="border-bottom:1px solid var(--border2)">
+    <span class="stand-rank"></span>
+    <span class="stand-em"></span>
+    <span class="stand-name"></span>
+    <span class="stand-wins" style="${hd}">勝</span>
+    <span class="stand-col" style="${hd}">負</span>
+    <span class="stand-col stand-draws" style="${hd}">分</span>
+    <span class="stand-col" style="${hd}">勝率</span>
+    <span class="stand-gb" style="${hd}">差</span>
+  </div>`;
+  const rowHTML = (t,i) => {
+    const pct = (t.wins + t.losses) > 0
+      ? (t.wins / (t.wins + t.losses)).toFixed(3).replace(/^0/,'')
+      : '.000';
+    return `<div class="stand-row">
+      <span class="stand-rank">${i+1}</span>
+      <span class="stand-em">${t.em}</span>
+      <span class="stand-name">${t.name}</span>
+      <span class="stand-wins">${t.wins}</span>
+      <span class="stand-col">${t.losses}</span>
+      <span class="stand-col stand-draws">${t.draws??0}</span>
+      <span class="stand-col">${pct}</span>
+      <span class="stand-gb">${t.gb||'—'}</span>
+    </div>`;
+  };
+  let html='';
+  if(data.central.length){
+    html += '<div class="card-hd"><div class="dot"></div>セ・リーグ</div>';
+    html += header + data.central.slice(0,6).map(rowHTML).join('');
+  }
+  if(data.pacific.length){
+    html += `<div class="card-hd" style="${data.central.length?'border-top:1px solid var(--border)':''}">パ・リーグ</div>`;
+    html += header + data.pacific.slice(0,6).map(rowHTML).join('');
+  }
+  el.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">データなし</div>';
+}
+
+// =============================================
+// 詳細ページ
+// =============================================
+function openGameDetail(id){
+  const g = gamesData.find(x=>x.id===id);
+  if(!g) return;
+  currentDetail = {type:'game',id};
+  const hasScore = g.homeScore !== null && g.awayScore !== null;
+  const statusLabel = g.status==='live'
+    ? '<span style="color:var(--red)">● 試合中</span>'
+    : g.status==='end' ? '試合終了' : '試合前';
+  const scoreHTML = hasScore
+    ? `<span style="font-family:Oswald,sans-serif;font-size:40px;font-weight:700;color:${g.homeScore>g.awayScore?'var(--accent)':'var(--text)'}">${g.homeScore}</span>
+       <span style="color:var(--text3);font-size:18px">—</span>
+       <span style="font-family:Oswald,sans-serif;font-size:40px;font-weight:700;color:${g.awayScore>g.homeScore?'var(--accent)':'var(--text)'}">${g.awayScore}</span>`
+    : `<span style="font-size:20px;color:var(--text3)">vs</span>`;
+  document.getElementById('detailCardBody').innerHTML = `
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">${statusLabel}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:24px">
+        <div style="text-align:center"><div style="font-size:28px">${g.homeEm}</div><div style="font-size:16px;font-weight:700;margin-top:6px">${g.home}</div></div>
+        <div style="display:flex;align-items:center;gap:12px">${scoreHTML}</div>
+        <div style="text-align:center"><div style="font-size:28px">${g.awayEm}</div><div style="font-size:16px;font-weight:700;margin-top:6px">${g.away}</div></div>
+      </div>
+    </div>`;
+  showDetailView();
+  loadComments(id);
+}
+
+function openNewsDetail(id){
+  const n = newsData.find(x=>x.id===id);
+  if(!n) return;
+  currentDetail = {type:'news',id};
+  const t = TEAMS[n.team]||TEAMS.other;
+  document.getElementById('detailCardBody').innerHTML = `
+    <span class="team-tag ${t.cls}" style="display:inline-block;margin-bottom:12px">${t.em} ${t.name}</span>
+    <div class="detail-title">${escHtml(n.title)}</div>
+    <div class="detail-meta"><span>${n.src}</span><span>${n.time}</span></div>
+    ${n.link?`<a href="${n.link}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:7px 14px;border-radius:6px;border:1px solid rgba(0,200,122,.3);color:var(--accent);font-size:12px;">↗ 元記事を読む</a>`:''}
+    <div class="detail-body" style="margin-top:14px">このニュースについてコメントで話し合えます。</div>`;
+  showDetailView();
+  loadComments(id);
+}
+
+function showDetailView(){
+  document.getElementById('appContent').style.display='none';
+  document.getElementById('detailView').classList.add('open');
+  document.getElementById('commentList').innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">読み込み中...</div>';
+  window.scrollTo(0,0);
+}
+
+function closeDetail(){
+  document.getElementById('appContent').style.display='';
+  document.getElementById('detailView').classList.remove('open');
+  currentDetail=null;
+}
+
+// =============================================
+// フィルター・タブ・モーダル共通
+// =============================================
+async function filterTeam(btn, team){
+  document.querySelectorAll('#teamFilter .nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = team;
+  loadThreads();
+}
+
+function showTab(el, name){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['top','games','news','bbs'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===name?'':'none';
+  });
+  closeDetail();
+  if(name==='bbs') loadThreads();
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function switchAuth(mode, btn){
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const isReg = mode==='register';
+  document.getElementById('authTitle').textContent = isReg?'新規登録':'ログイン';
+  const submitBtn = document.getElementById('authSubmitBtn');
+  submitBtn.textContent = isReg?'登録する':'ログイン';
+  submitBtn.dataset.mode = mode;
+  document.getElementById('registerExtra').style.display = isReg?'block':'none';
+  document.getElementById('favTeamField').style.display = isReg?'block':'none';
+}
+
+// =============================================
+// ユーティリティ
+// =============================================
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// =============================================
+// 起動
+// =============================================
+async function init(){
+  await initAuth();
+  fetchGames();
+  fetchStandings();
+  loadSideThreads();
+  loadHotThreads();
+  fetchNews();
+}
+
+init();
+</script>
