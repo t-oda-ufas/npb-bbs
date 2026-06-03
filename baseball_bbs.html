@@ -1009,7 +1009,7 @@ function gameRowHTML(g){
       <div class="team"><span class="team-em">${g.homeEm}</span><span class="team-nm">${g.home}</span></div>
       <div class="game-row-center">
         <div class="score-wrap">${scoreHTML}</div>
-        ${g.venue?`<div class="game-venue">📍 ${g.venue}</div>`:''}
+        ${g.venue?`<div class="game-venue">${g.venue}</div>`:''}
       </div>
       <div class="team" style="justify-content:flex-end"><span class="team-nm">${g.away}</span><span class="team-em">${g.awayEm}</span></div>
       ${badgeHTML}
@@ -1113,7 +1113,7 @@ function openGameDetail(id){
   const statusLabel = g.status==='live'
     ? '<span style="color:var(--red)">● 試合中</span>'
     : g.status==='end' ? '試合終了' : '試合前';
-  const venueLabel = g.venue ? `<span style="font-size:11px;color:var(--text3)">📍 ${g.venue}</span>` : '';
+  const venueLabel = g.venue ? `<span style="font-size:11px;color:var(--text3)">${g.venue}</span>` : '';
   const scoreHTML = hasScore
     ? `<span style="font-family:Oswald,sans-serif;font-size:40px;font-weight:700;color:${g.homeScore>g.awayScore?'var(--accent)':'var(--text)'}">${g.homeScore}</span>
        <span style="color:var(--text3);font-size:18px">—</span>
