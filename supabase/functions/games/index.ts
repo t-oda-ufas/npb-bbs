@@ -68,6 +68,10 @@ async function scrapeYahoo() {
     const awayName = awayMatch?.[1].trim();
     if (!homeName || !awayName) continue;
 
+    // 球場名
+    const venueMatch = /bb-score__venue[^>]*>([^<]+)</.exec(item);
+    const venue = venueMatch?.[1].trim() ?? '';
+
     const home = TEAM_MAP[homeName] ?? { id: 'other', name: homeName, em: '⚾', league: 'c' };
     const away = TEAM_MAP[awayName] ?? { id: 'other', name: awayName, em: '⚾', league: 'c' };
 
@@ -103,7 +107,7 @@ async function scrapeYahoo() {
       id: gameId,
       home: home.name, homeEm: home.em, homeTeam: home.id,
       away: away.name, awayEm: away.em, awayTeam: away.id,
-      homeScore, awayScore, status, comments: 0,
+      homeScore, awayScore, status, venue, comments: 0,
     });
   }
   return games;
