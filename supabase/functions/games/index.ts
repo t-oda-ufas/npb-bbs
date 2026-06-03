@@ -2,7 +2,7 @@ const CACHE_TTL = 2 * 60 * 1000;
 let cache: { data: string; ts: number } | null = null;
 
 // インスタンス存続中に両投手を蓄積するメモリ
-const pitcherMemory: Record<string, { home: any; away: any }> = {};
+const pitcherMemory: Record<string, { home: any; away: any; homeSave: string|null; awaySave: string|null }> = {};
 
 const TEAM_MAP: Record<string, { id: string; name: string; em: string; league: string }> = {
   '巨人':       { id: 'giants',    name: '巨人',       em: '🐰', league: 'c' },
@@ -116,16 +116,24 @@ async function scrapeYahoo() {
     const curHome = pickPitcher(parsePlayers(homeSection));
     const curAway = pickPitcher(parsePlayers(awaySection));
 
-    if (!pitcherMemory[gameId]) pitcherMemory[gameId] = { home: null, away: null };
+    if (!pitcherMemory[gameId]) pitcherMemory[gameId] = { home: null, away: null, homeSave: null, awaySave: null };
     const mem = pitcherMemory[gameId];
     const isDecided = (p: any) => p && ['勝','敗','Ｓ','S'].includes(p.prefix);
     if (curHome && (isDecided(curHome) || !mem.home)) mem.home = curHome;
     if (curAway && (isDecided(curAway) || !mem.away)) mem.away = curAway;
 
-    const prefixLabel = (p: any) => {
+    // セーブ投手（勝利チーム側から取得）
+    if (isEnd) {
+      const hSave = parsePlayers(homeSection).find(p => p.prefix === 'Ｓ' || p.prefix === 'S');
+      const aSave = parsePlayers(awaySection).find(p => p.prefix === 'Ｓ' || p.prefix === 'S');
+      if (hSave) mem.homeSave = hSave.name;
+      if (aSave) mem.awaySave = aSave.name;
+    }
+
+    const prefixLabel = (p: any, saveName: string|null) => {
       if (!p) return null;
       const labels: Record<string, string> = { '勝':'勝', '敗':'負', 'Ｓ':'S', 'S':'S' };
-      return { name: p.name, display: labels[p.prefix] ?? '' };
+      return { name: p.name, display: labels[p.prefix] ?? '', save: saveName };
     };
 
     games.push({
@@ -133,8 +141,8 @@ async function scrapeYahoo() {
       home: home.name, homeEm: home.em, homeTeam: home.id,
       away: away.name, awayEm: away.em, awayTeam: away.id,
       homeScore, awayScore, status, venue, inning, startTime,
-      homePitcher: prefixLabel(mem.home),
-      awayPitcher: prefixLabel(mem.away),
+      homePitcher: prefixLabel(mem.home, mem.homeSave),
+      awayPitcher: prefixLabel(mem.away, mem.awaySave),
       comments: 0,
     });
   }

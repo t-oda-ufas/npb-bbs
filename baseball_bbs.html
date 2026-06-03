@@ -84,9 +84,9 @@ nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-b
 .game-row-main{display:flex;align-items:center;width:100%;gap:6px}
 .game-row-center{display:flex;flex-direction:column;align-items:center}
 .game-venue{font-size:10px;color:var(--text3);margin-top:3px;white-space:nowrap}
-.pitcher-tag{width:54px;flex-shrink:0;line-height:1.4}
+.pitcher-tag{width:56px;flex-shrink:0;line-height:1.5}
 .pitcher-name{font-size:11px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pitcher-prefix{color:var(--accent);font-weight:700}
+.pitcher-pfx{font-weight:700}
 @media(max-width:480px){.pitcher-tag{display:none}}
 
 /* NEWS */
@@ -1020,9 +1020,18 @@ function gameRowHTML(g){
     : g.status==='end'
     ? `<span class="badge end">終了</span>`
     : `<span class="badge end" style="color:var(--text2)">${g.startTime||'予定'}</span>`;
-  const pitcherTag = (p, align) => p
-    ? `<div class="pitcher-tag" style="text-align:${align}"><div class="pitcher-name">${p.display?`<span class="pitcher-prefix">${p.display}：</span>`:''}${p.name}</div></div>`
-    : `<div class="pitcher-tag"></div>`;
+  const GREEN = 'color:var(--accent)';
+  const pitcherLine = (display, name) => {
+    const isGreen = display === '勝' || display === 'S';
+    const pfx = display ? `<span class="pitcher-pfx" style="${isGreen?GREEN:'color:var(--text3)'}">${display}：</span>` : '';
+    return `<div class="pitcher-name" style="${isGreen?GREEN:''}">${pfx}${name}</div>`;
+  };
+  const pitcherTag = (p, align) => {
+    if(!p) return `<div class="pitcher-tag"></div>`;
+    let html = pitcherLine(p.display, p.name);
+    if(p.save) html += pitcherLine('S', p.save);
+    return `<div class="pitcher-tag" style="text-align:${align}">${html}</div>`;
+  };
   return `<div class="game-row" onclick="openGameDetail('${g.id}')">
     <div class="game-row-main">
       <div class="team"><span class="team-em">${g.homeEm}</span><span class="team-nm">${g.home}</span></div>
