@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
   try {
     const games = await scrapeYahoo();
     if (!games.length) throw new Error('no games');
-    const payload = JSON.stringify({ ok: true, games });
+    const payload = JSON.stringify({ ok: true, games, date: new Date(Date.now() + 9*60*60*1000).toISOString().split('T')[0] });
     cache = { data: payload, ts: Date.now() };
     return jsonResponse(payload);
   } catch (e) {
@@ -97,35 +97,34 @@ async function scrapeYahoo() {
     }
 
     // 投手情報
-    const parsePlayer = (raw: string | undefined) => {
-      if (!raw) return null;
-      const m = /^\(([^)]+)\)(.+)$/.exec(raw.trim());
-      return m ? { prefix: m[1], name: m[2] } : null;
+    // セクションごとに全選手を取得（勝・敗・Ｓ・投など複数ありうる）
+    const parsePlayers = (sectionHtml: string) => {
+      const all: { prefix: string; name: string }[] = [];
+      const re = /bb-score__player[^>]*>\(([^)]+)\)([^<]+)</g;
+      let m;
+      while ((m = re.exec(sectionHtml)) !== null) all.push({ prefix: m[1], name: m[2].trim() });
+      return all;
     };
-    const homePlayerMatch = /bb-score__playerHome[\s\S]*?bb-score__player[^>]*>([^<]+)</.exec(item);
-    const awayPlayerMatch = /bb-score__playerAway[\s\S]*?bb-score__player[^>]*>([^<]+)</.exec(item);
-    const homePlayer = parsePlayer(homePlayerMatch?.[1]);
-    const awayPlayer = parsePlayer(awayPlayerMatch?.[1]);
+    const homeSection = /bb-score__playerHome([\s\S]*?)(?:bb-score__playerAway|$)/.exec(item)?.[1] ?? '';
+    const awaySection = /bb-score__playerAway([\s\S]*?)$/.exec(item)?.[1] ?? '';
+    const PRIO: Record<string, number> = { '勝':0, '敗':1, '投':2, 'Ｓ':3, 'S':3 };
+    const pickPitcher = (players: { prefix: string; name: string }[]) => {
+      const filtered = players.filter(p => !['打','捕','走'].includes(p.prefix));
+      if (!filtered.length) return null;
+      return filtered.sort((a, b) => (PRIO[a.prefix]??9) - (PRIO[b.prefix]??9))[0];
+    };
+    const curHome = pickPitcher(parsePlayers(homeSection));
+    const curAway = pickPitcher(parsePlayers(awaySection));
 
-    // 打者を除き投手のみ抽出
-    const toPitcher = (p: { prefix: string; name: string } | null) =>
-      p && p.prefix !== '打' ? { name: p.name, prefix: p.prefix } : null;
-
-    const curHome = toPitcher(homePlayer);
-    const curAway = toPitcher(awayPlayer);
-
-    // メモリに蓄積（勝敗確定時は上書き、それ以外は初回のみ保存）
     if (!pitcherMemory[gameId]) pitcherMemory[gameId] = { home: null, away: null };
     const mem = pitcherMemory[gameId];
-    const isDecided = (p: any) => p && (p.prefix === '勝' || p.prefix === '負' || p.prefix === 'S');
+    const isDecided = (p: any) => p && ['勝','敗','Ｓ','S'].includes(p.prefix);
     if (curHome && (isDecided(curHome) || !mem.home)) mem.home = curHome;
     if (curAway && (isDecided(curAway) || !mem.away)) mem.away = curAway;
 
-
-    // prefix → 表示ラベル変換
     const prefixLabel = (p: any) => {
       if (!p) return null;
-      const labels: Record<string, string> = { 勝: '勝', 負: '負', S: 'S' };
+      const labels: Record<string, string> = { '勝':'勝', '敗':'負', 'Ｓ':'S', 'S':'S' };
       return { name: p.name, display: labels[p.prefix] ?? '' };
     };
 

@@ -984,9 +984,21 @@ async function fetchGames(){
     const data = await res.json();
     if(data.ok && data.games && data.games.length){
       gamesData = data.games;
-      const d = new Date(data.date+'T00:00:00+09:00');
-      document.getElementById('gameDateHd').textContent =
-        `今日の試合 · ${d.getMonth()+1}月${d.getDate()}日`;
+      // 日付表示
+      if(data.date){
+        const d = new Date(data.date+'T00:00:00+09:00');
+        document.getElementById('gameDateHd').textContent =
+          `今日の試合 · ${d.getMonth()+1}月${d.getDate()}日`;
+      }
+      // コメント数をSupabaseから取得
+      const gameIds = gamesData.map(g=>g.id);
+      const {data:cmts} = await _supa.from('comments')
+        .select('target_id').eq('target_type','game').in('target_id', gameIds);
+      if(cmts){
+        const counts = {};
+        cmts.forEach(c=>{ counts[c.target_id]=(counts[c.target_id]||0)+1; });
+        gamesData = gamesData.map(g=>({...g, comments: counts[g.id]||0}));
+      }
       renderGamesTop(); renderGamesFull();
       if(gamesData.some(g=>g.status==='live')) setTimeout(fetchGames, 60000);
       return;
