@@ -7,8 +7,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- ★ 下の2行をあなたのプロジェクト情報に書き換えてください -->
 <script>
-  const SUPABASE_URL = '__SUPABASE_URL__';
-  const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+  const SUPABASE_URL = 'https://ohoibpyrfvwymmwsmhta.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ob2licHlyZnZ3eW1td3NtaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NjM0MTgsImV4cCI6MjA5NjAzOTQxOH0.wPzwSw27VqI0JskYmQCKS-V_dsdwrq6epOXmqXwriME';
   window.SUPABASE_NEWS_URL = SUPABASE_URL + '/functions/v1/news';
   window.SUPABASE_GAMES_URL = SUPABASE_URL + '/functions/v1/games';
   window.SUPABASE_STANDINGS_URL = SUPABASE_URL + '/functions/v1/standings';
@@ -50,6 +50,8 @@ nav{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-b
 .nav-btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
 .nav-btn.primary:hover{background:var(--accent2)}
 .avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;cursor:pointer}
+.logout-btn{border-color:var(--red)!important;color:var(--red)!important;}
+.logout-btn:hover{background:rgba(232,69,69,.12)!important;}
 
 /* LAYOUT */
 .layout{display:grid;grid-template-columns:1fr 300px;gap:20px;max-width:1080px;margin:0 auto;padding:24px 16px}
@@ -608,13 +610,6 @@ function timeAgo(dateStr){
 let newsData = [];
 let gamesData = [];
 const CL_TEAMS = new Set(['giants','tigers','carp','dragons','swallows','baystars']);
-const FALLBACK_GAMES = [
-  {id:'carp-giants',home:'広島',homeEm:'🎏',homeTeam:'carp',away:'巨人',awayEm:'🐰',awayTeam:'giants',homeScore:1,awayScore:1,status:'live',comments:41},
-  {id:'tigers-dragons',home:'阪神',homeEm:'🐯',homeTeam:'tigers',away:'中日',awayEm:'🐉',awayTeam:'dragons',homeScore:5,awayScore:3,status:'end',comments:24},
-  {id:'lions-hawks',home:'西武',homeEm:'🦁',homeTeam:'lions',away:'SB',awayEm:'🦅',awayTeam:'hawks',homeScore:2,awayScore:4,status:'end',comments:18},
-  {id:'eagles-fighters',home:'楽天',homeEm:'🦅',homeTeam:'eagles',away:'日ハム',awayEm:'🦊',awayTeam:'fighters',homeScore:3,awayScore:6,status:'end',comments:12},
-  {id:'baystars-swallows',home:'DeNA',homeEm:'⭐',homeTeam:'baystars',away:'ヤクルト',awayEm:'🦢',awayTeam:'swallows',homeScore:4,awayScore:2,status:'end',comments:9},
-];
 const FALLBACK_STANDINGS = {
   central:[
     {rank:1,name:'阪神',em:'🐯',wins:38,losses:22,gb:'—'},
@@ -650,10 +645,17 @@ async function initAuth(){
     updateNavUI();
   }
   _supa.auth.onAuthStateChange(async (_event, session)=>{
-    currentUser = session?.user || null;
-    if(currentUser) await loadProfile();
-    else currentProfile = null;
-    updateNavUI();
+    if(_event === 'SIGNED_OUT'){
+      currentUser = null;
+      currentProfile = null;
+      updateNavUI();
+      return;
+    }
+    if(session?.user){
+      currentUser = session.user;
+      await loadProfile();
+      updateNavUI();
+    }
   });
 }
 
@@ -669,9 +671,9 @@ async function loadProfile(){
 
 function updateNavUI(){
   const el = document.getElementById('navRight');
-  if(currentUser && currentProfile){
-    const initial = (currentProfile.username||'U')[0];
-    el.innerHTML = `<div class="avatar" onclick="openModal('favModal')" title="お気に入り設定">${initial}</div>`;
+  if(currentUser){
+    const initial = (currentProfile?.username||'U')[0];
+    el.innerHTML = `<div class="avatar" onclick="openModal('favModal')" title="お気に入り設定">${initial}</div><button class="nav-btn logout-btn" onclick="doLogout()">ログアウト</button>`;
   } else {
     el.innerHTML = `<button class="nav-btn" onclick="openModal('authModal')">ログイン</button><button class="nav-btn primary" onclick="openModal('authModal')">会員登録</button>`;
     document.querySelectorAll('.fav-em-display').forEach(el=>el.textContent='⚾');
@@ -738,15 +740,23 @@ function goToStep2(){
   showAuthView('reg2');
 }
 
+async function doLogout(){
+  await _supa.auth.signOut();
+  showToast('ログアウトしました');
+}
+
 async function doLogin(){
   const email = document.getElementById('loginEmail').value.trim();
   const pass  = document.getElementById('loginPass').value;
   if(!email||!pass){showToast('入力してください');return;}
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = 'ログイン中...';
-  const {error} = await _supa.auth.signInWithPassword({email, password:pass});
+  const {data, error} = await _supa.auth.signInWithPassword({email, password:pass});
   btn.disabled = false; btn.textContent = 'ログイン';
   if(error){showToast('メールアドレスかパスワードが違います');return;}
+  currentUser = data.user;
+  await loadProfile();
+  updateNavUI();
   showToast('ログインしました！');
   closeModal('authModal');
 }
@@ -868,8 +878,8 @@ async function loadComments(targetId){
     return;
   }
   list.innerHTML = data.map((c,i)=>{
-    const liked = currentUser && c.likes.some(l=>l.user_id===currentUser.id);
-    const likeCount = c.likes.length;
+    const liked = currentUser && c.likes && c.likes.some(l=>l.user_id===currentUser.id);
+    const likeCount = c.like_count ?? 0;
     return `<div class="comment-item">
       <div class="comment-av">${(c.profiles?.username||'?')[0]}</div>
       <div class="comment-content">
@@ -923,7 +933,7 @@ async function fetchNews(){
   const EDGE_URL = window.SUPABASE_NEWS_URL || '';
   if(EDGE_URL){
     try{
-      const res = await fetch(EDGE_URL, {signal:AbortSignal.timeout(8000)});
+      const res = await fetch(EDGE_URL, {headers:{'Authorization':'Bearer '+SUPABASE_ANON_KEY},signal:AbortSignal.timeout(8000)});
       const data = await res.json();
       if(data.ok && data.items && data.items.length){
         newsData = data.items.map(function(item,i){
@@ -979,6 +989,7 @@ function newsRowHTML(n){
 async function fetchGames(){
   try{
     const res = await fetch(window.SUPABASE_GAMES_URL, {
+      headers: {'Authorization': 'Bearer ' + SUPABASE_ANON_KEY},
       signal: AbortSignal.timeout(8000),
     });
     const data = await res.json();
@@ -990,21 +1001,22 @@ async function fetchGames(){
         document.getElementById('gameDateHd').textContent =
           `今日の試合 · ${d.getMonth()+1}月${d.getDate()}日`;
       }
-      // コメント数をSupabaseから取得
-      const gameIds = gamesData.map(g=>g.id);
-      const {data:cmts} = await _supa.from('comments')
-        .select('target_id').eq('target_type','game').in('target_id', gameIds);
-      if(cmts){
+      // コメント数をSupabaseから取得（当日ゲームIDのプレフィックスで絞り込む）
+      const datePrefix = data.date.replace(/-/g,''); // "20260619"
+      const {data:cmts, error:cmtErr} = await _supa.from('comments')
+        .select('target_id')
+        .eq('target_type','game')
+        .like('target_id', datePrefix + '-%');
+      if(cmts && !cmtErr){
         const counts = {};
         cmts.forEach(c=>{ counts[c.target_id]=(counts[c.target_id]||0)+1; });
         gamesData = gamesData.map(g=>({...g, comments: counts[g.id]||0}));
       }
       renderGamesTop(); renderGamesFull();
-      if(gamesData.some(g=>g.status==='live')) setTimeout(fetchGames, 60000);
+      if(gamesData.some(g=>g.status==='live')) setTimeout(fetchGames, 30000);
       return;
     }
   }catch(e){}
-  gamesData = FALLBACK_GAMES;
   renderGamesTop(); renderGamesFull();
 }
 
@@ -1022,25 +1034,31 @@ function gameRowHTML(g){
     : `<span class="badge end" style="color:var(--text2)">${g.startTime||'予定'}</span>`;
   const GREEN = 'color:var(--accent)';
   const pitcherLine = (display, name) => {
-    const isGreen = display === '勝' || display === 'S';
-    const pfx = display ? `<span class="pitcher-pfx" style="${isGreen?GREEN:'color:var(--text3)'}">${display}：</span>` : '';
+    const label = display || '投';
+    const isGreen = label === '勝' || label === 'S';
+    const pfx = `<span class="pitcher-pfx" style="${isGreen?GREEN:'color:var(--text3)'}">${label}：</span>`;
     return `<div class="pitcher-name" style="${isGreen?GREEN:''}">${pfx}${name}</div>`;
   };
-  const pitcherTag = (p, align) => {
-    if(!p) return `<div class="pitcher-tag"></div>`;
-    let html = pitcherLine(p.display, p.name);
-    if(p.save) html += pitcherLine('S', p.save);
+  const playerTag = (pitcher, batter, align) => {
+    if(batter && !pitcher) {
+      return `<div class="pitcher-tag" style="text-align:${align}">
+        <div class="pitcher-name" style="color:var(--amber)"><span class="pitcher-pfx">打：</span>${batter.name}</div>
+      </div>`;
+    }
+    if(!pitcher) return `<div class="pitcher-tag"></div>`;
+    let html = pitcherLine(pitcher.display, pitcher.name);
+    if(pitcher.save) html += pitcherLine('S', pitcher.save);
     return `<div class="pitcher-tag" style="text-align:${align}">${html}</div>`;
   };
   return `<div class="game-row" onclick="openGameDetail('${g.id}')">
     <div class="game-row-main">
       <div class="team"><span class="team-em">${g.homeEm}</span><span class="team-nm">${g.home}</span></div>
-      ${pitcherTag(g.homePitcher,'right')}
+      ${playerTag(g.homePitcher, g.homeBatter, 'right')}
       <div class="game-row-center">
         <div class="score-wrap">${scoreHTML}</div>
         ${g.venue?`<div class="game-venue">${g.venue}</div>`:''}
       </div>
-      ${pitcherTag(g.awayPitcher,'left')}
+      ${playerTag(g.awayPitcher, g.awayBatter, 'left')}
       <div class="team" style="justify-content:flex-end"><span class="team-nm">${g.away}</span><span class="team-em">${g.awayEm}</span></div>
       ${badgeHTML}
       <div class="comment-ct">💬 <span>${g.comments||0}</span></div>
@@ -1077,6 +1095,7 @@ function renderGamesFull(){
 async function fetchStandings(){
   try{
     const res = await fetch(window.SUPABASE_STANDINGS_URL, {
+      headers: {'Authorization': 'Bearer ' + SUPABASE_ANON_KEY},
       signal: AbortSignal.timeout(8000),
     });
     const data = await res.json();
